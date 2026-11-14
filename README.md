@@ -1,4 +1,4 @@
-# MolecularCloneSkill
+# MoleculeCloneSkill
 
 多片段无缝克隆（In-Fusion / Gibson / SLIC）的设计与上线前审计 skill：同源臂长度与 Tm、臂在反应内的唯一性、引物唯一结合位点、DpnI 处理、菌落 PCR 阴性对照，以及重复同源碰撞这类会悄悄失败的坑。
 
