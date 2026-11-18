@@ -171,6 +171,8 @@ python3 scripts/tm_engine.py primers.json --csv primers.csv --latex
 python3 scripts/make_primer_sheet.py sheet.json
 ```
 
+**同一模板的片段排在一起。** 引物表按模板分组，来自同一管质粒的几对相邻（例如三个 P2A 片段都来自 pBApo，就连续排），操作时一次拿出一管模板就能配完这几管反应。组内保持原来的先后，别打乱。
+
 `sheet.json` 的 `groups` 每项一个引物对（`product`、`template`、`f`、`r`、`len`），`primers` 给 `seq` 与 `tm`。引物名对不上或缺序列时脚本以非 0 退出，半成品表出不去。表格类交付物一律 xlsx，不要另写 csv。
 
 **每个构建的片段组合写成一行：`片段1+片段2+片段3 -> 质粒名`。** 片段名就是引物表 `产物` 列的字面值，报告正文、片段表、图、文件命名全用同一套，不再另起简称。例如：
