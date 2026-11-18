@@ -62,6 +62,17 @@ def circular(seq, a, b):
     return seq[a - 1 :] + seq[:b]
 
 
+def auto_binding(template, seq):
+    """Longest 3' suffix that anneals uniquely, so the sheet needs no binding column."""
+    d = template + template
+    for need in (1, 2):                     # prefer a unique site, then any
+        for k in range(len(seq), 11, -1):
+            tail = seq[-k:]
+            if d.count(tail) == need or d.count(rc(tail)) == need:
+                return k
+    raise SystemExit("primer %s does not anneal" % seq)
+
+
 def amplimer(template, primer):
     """Find the primer's 3' binding site; return its 0-based start (or -1)."""
     bind = primer["seq"][-primer["binding"] :]
@@ -97,6 +108,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("design")
     ap.add_argument("--outdir", required=True, help="folder for this construct")
+    ap.add_argument("--sheet", help="order sheet (xlsx). When given, the primer sequences in the "
+                                   "sheet override the design JSON: only what gets synthesised counts.")
     args = ap.parse_args(argv)
 
     d = json.load(open(args.design))
@@ -105,7 +118,25 @@ def main(argv=None):
     template_features = {}
     for k, v in d.get("template_dna", {}).items():
         _, template_features[k] = snapgene_io.parse(v)
-    primers = {p["name"]: p for p in d["primers"]}
+    primers = {p["name"]: dict(p) for p in d["primers"]}
+    if args.sheet:
+        from openpyxl import load_workbook
+        ws = load_workbook(args.sheet).active
+        sheet = {}
+        for r in range(2, ws.max_row + 1):
+            name, seq = ws.cell(r, 3).value, ws.cell(r, 4).value
+            if name and seq:
+                sheet[name.strip()] = seq.strip().upper()
+        for name, seq in sheet.items():
+            primers.setdefault(name, {"name": name})
+            primers[name]["seq"] = seq
+            primers[name]["binding"] = None      # filled per template below
+        print("primers read from %s: %d" % (args.sheet, len(sheet)))
+    for spec in d["fragments"].values():
+        for key in ("f", "r"):
+            p = primers[spec[key]]
+            if p.get("binding") is None:
+                p["binding"] = auto_binding(templates[spec["template"]], p["seq"])
     order = d["order"]
     name = d.get("name") or os.path.splitext(os.path.basename(args.design))[0]
     os.makedirs(args.outdir, exist_ok=True)
@@ -123,7 +154,7 @@ def main(argv=None):
         # A PCR product is a linear molecule; only the Gibson product is circular.
         shift = len(f["seq"]) - inner_start
         feats = [(frag, 1, len(product), "misc_feature")]
-        for label, a, b, typ, _strand, color in template_features[d["fragments"][frag]["template"]]:
+        for label, a, b, typ, _strand, color in template_features.get(d["fragments"][frag]["template"], []):
             if a >= inner_start + 1 and b <= inner_end:
                 feats.append((label, a + shift, b + shift, typ, 1, color))
         snapgene_io.write(os.path.join(args.outdir, frag + ".dna"), product,

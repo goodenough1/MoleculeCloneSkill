@@ -198,8 +198,10 @@ V16T+I16T -> pN1-019
 ```
 
 ```bash
-python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT
+python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT --sheet 引物表.xlsx
 ```
+
+**验证必须用引物表里的序列，`--sheet` 是强制的。** 表里那一行就是下单合成的那一条，设计 JSON 里自带的副本随时可能过期。脚本读到 `--sheet` 后覆盖 JSON 里的序列，按模板自动找 3′ 结合区，JSON 只提供"哪条片段用哪两条引物"。不给 `--sheet` 的验证结果不作数——两边各存一份引物，改了一处没改另一处时，自洽的旧副本会让比对一路绿灯。
 
 `design.json` 与 `audit_assembly.py` 同一份。脚本按引物重新扩增每个片段（5′ 尾照写，产物是线性的），再按同源臂把它们拼起来、环化，最后与目标逐碱基比对；不一致就以非 0 退出，文件夹里不会留下对不上号的文件。
 
