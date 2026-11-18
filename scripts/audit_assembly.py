@@ -173,6 +173,46 @@ def end_audit(order, frags, end_len):
     return problems, self_hits
 
 
+def end_partners(order, frags, min_overlap=15, end_len=30):
+    """Every end must have exactly one partner, and it must be the designed neighbour.
+
+    Exact-equality of 21 bp ends is too weak: a 16 bp overlap between two unrelated
+    ends still ligates, and a 3' end can also pair backwards. So build the full
+    ordered matrix of "fragment A's right end -> fragment B's left end" over every
+    shared suffix/prefix of at least min_overlap, then count partners per end.
+    """
+    names = list(order)
+    mate = {names[i]: (names[(i - 1) % len(names)], names[(i + 1) % len(names)]) for i in range(len(names))}
+    partners = {}
+    for a in names:
+        for b in names:
+            if a == b:
+                continue
+            k = 0
+            for cand in range(min(end_len, len(frags[a]), len(frags[b])), min_overlap - 1, -1):
+                if frags[a][-cand:] == frags[b][:cand]:
+                    k = cand
+                    break
+            if k:
+                partners.setdefault(a, []).append((b, k))
+    bad = []
+    for a in names:
+        got = partners.get(a, [])
+        want = mate[a][1]
+        if [g[0] for g in got] != [want]:
+            bad.append(("right", a, want, got))
+    back = {}
+    for a, lst in partners.items():
+        for b, k in lst:
+            back.setdefault(b, []).append((a, k))
+    for b in names:
+        got = back.get(b, [])
+        want = mate[b][0]
+        if [g[0] for g in got] != [want]:
+            bad.append(("left", b, want, got))
+    return partners, bad
+
+
 def fragment_intervals(target, order, frags):
     """0-based start and length of each fragment on the circular target."""
     n = len(target)
@@ -284,6 +324,12 @@ def main(argv=None):
 
     # 2. terminal homology collisions
     rep.section("2. 末端同源碰撞")
+    partners, pair_bad = end_partners(order, {n: frags[n] for n in order}, args.end_len if args.end_len >= 15 else 15)
+    for side, who, want, got in pair_bad:
+        got_s = "、".join("%s(%dbp)" % (g[0], g[1]) for g in got) or "无"
+        rep.fail("%s 的%s端配对不唯一：应为 %s，实际 %s" % (who, "右" if side == "right" else "左", want, got_s))
+    if not pair_bad:
+        rep.ok("每个片段的左右端各只有 1 个配对对象，且都是设计上的相邻片段")
     problems, self_hits = end_audit(order, frags, args.end_len)
     if problems:
         for a, b, seq in problems:
