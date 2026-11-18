@@ -9,6 +9,8 @@
 - `scripts/audit_assembly.py`：组装、末端同源、同源臂（15–21 bp / Tm ≈ 50 °C / 反应内唯一）、引物唯一性、退火温度审计
 - `scripts/check_primers.py`：引物唯一性硬检查、筛选引物对的产物预测与多模板对照（`absent_on`、`linear`）
 - `scripts/tm_engine.py`：固定参数的 Tm 与退火温度引擎
+- `scripts/make_primer_sheet.py`：按实验室模板生成引物表 xlsx（逐对合并、`LEN`/`AVERAGE`/`IF` 公式）
+- `assets/primer_design_template.xlsx`：实验室引物表模板原件
 
 ## 用法
 
@@ -16,6 +18,7 @@
 python3 scripts/audit_assembly.py design.json
 python3 scripts/check_primers.py primers.json --csv primer_qc.csv
 python3 scripts/tm_engine.py primers.json --csv primers.csv --latex
+python3 scripts/make_primer_sheet.py sheet.json
 ```
 
 脚本的退出码非 0 表示有检查未通过，可以直接用来卡住后续步骤。
