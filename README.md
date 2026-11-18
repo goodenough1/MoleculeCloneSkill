@@ -9,6 +9,8 @@
 - `scripts/audit_assembly.py`：组装、末端同源、同源臂（15–21 bp / Tm ≈ 50 °C / 反应内唯一）、引物唯一性、退火温度审计
 - `scripts/check_primers.py`：引物唯一性硬检查、筛选引物对的产物预测与多模板对照（`absent_on`、`linear`）
 - `scripts/tm_engine.py`：固定参数的 Tm 与退火温度引擎
+- `scripts/simulate_build.py`：按引物模拟每个 PCR、按同源臂模拟 Gibson，把片段（线性）与产物（环状）写成 `.dna` 并与目标比对
+- `scripts/snapgene_io.py`：`.dna` 读写，含拓扑 flags 与 feature 颜色
 - `scripts/make_primer_sheet.py`：按实验室模板生成引物表 xlsx（逐对合并、`LEN`/`AVERAGE`/`IF` 公式）
 - `assets/primer_design_template.xlsx`：实验室引物表模板原件
 
@@ -19,6 +21,7 @@ python3 scripts/audit_assembly.py design.json
 python3 scripts/check_primers.py primers.json --csv primer_qc.csv
 python3 scripts/tm_engine.py primers.json --csv primers.csv --latex
 python3 scripts/make_primer_sheet.py sheet.json
+python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT
 ```
 
 脚本的退出码非 0 表示有检查未通过，可以直接用来卡住后续步骤。
