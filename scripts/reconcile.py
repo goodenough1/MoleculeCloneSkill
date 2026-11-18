@@ -67,6 +67,8 @@ def main(argv=None):
     for path in args.design:
         d = json.load(open(path))
         for p in d.get("primers", []):
+            if "seq" not in p:          # 设计 JSON 只存名称，序列以表为准
+                continue
             want = by_name.get(p["name"])
             if want and want != p["seq"].upper():
                 problems.append("%s 里 %s 与表不一致" % (os.path.basename(path), p["name"]))
