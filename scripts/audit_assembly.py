@@ -196,6 +196,13 @@ def end_partners(order, frags, min_overlap=15, end_len=30):
             if k:
                 partners.setdefault(a, []).append((b, k))
     bad = []
+    # a fragment whose own ends anneal to each other closes into a circle and drops out
+    for a in names:
+        lim = min(end_len, len(frags[a]) // 2)
+        for cand in range(lim, min_overlap - 1, -1):
+            if frags[a][-cand:] == frags[a][:cand]:
+                bad.append(("self", a, "自身两端不成环", [("自身", cand)]))
+                break
     for a in names:
         got = partners.get(a, [])
         want = mate[a][1]
