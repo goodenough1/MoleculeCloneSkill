@@ -135,6 +135,9 @@ def main(argv=None):
     for spec in d["fragments"].values():
         for key in ("f", "r"):
             p = primers[spec[key]]
+            if not p.get("seq"):
+                raise SystemExit("primer %s has no sequence: pass --sheet with the order sheet"
+                                 % p["name"])
             if p.get("binding") is None:
                 p["binding"] = auto_binding(templates[spec["template"]], p["seq"])
     order = d["order"]
