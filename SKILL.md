@@ -189,6 +189,18 @@ V16T+I16T -> pN1-019
 
 **方案文档用 LaTeX 编译 PDF。** 中文文档 `ctexart`，表格 `booktabs`，长序列 `seqsplit`，宽表 `tabularx` 或 `resizebox`，浮动体加 `[H]` 固定在原位。交付 `.tex` 与 `.pdf` 两份，编译后 `pdftotext` 全文 grep 旧数字。
 
+## 改一处，全同步
+
+交付物不是单个文件。改一条引物、一个片段边界、一处长度，会同时牵动引物表、方案正文、表格、插图、GenBank、验证目录、质控记录。这些必须在同一步一起改完，不能等对方逐个指出。
+
+三条做法：
+
+1. **先列影响面再动手。** 改之前把这次会波及的文件写下来，改完逐项勾掉。
+2. **同一份数据只存一处。** 引物序列以引物表为准，设计 JSON 与文档都从表里读；发现第二份副本就删掉或改成自动生成。
+3. **交付前跑对账。** `scripts/reconcile.py` 比对表内、表与设计 JSON、表与验证目录里的 `.dna` 长度、表与文档正文四处，退出码非 0 就先修。
+
+对方指出"某处没更新"时，把同类的地方一起查，只补被点名的那一处等于把下一次返工留给自己。
+
 ## 验证：把设计落成能打开的 .dna
 
 审计通过、文档写完，还要再走一遍"照着这个方案做出来的东西对不对"。做法是每个构建单独一个文件夹，把每一步的产物写成 SnapGene 的 `.dna`，人能在软件里逐个接头核对：
@@ -243,3 +255,4 @@ python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT --sheet �
 - `assets/primer_design_template.xlsx`：实验室引物表模板原件，版式与公式的参照。
 - `scripts/simulate_build.py`：按引物模拟每个 PCR、按同源臂模拟 Gibson，把片段与产物写成 `.dna`。
 - `scripts/snapgene_io.py`：`.dna` 读写（跳过序列前的 flags 字节，按需写线性/环状拓扑）。
+- `scripts/reconcile.py`：对账，比对引物表、设计 JSON、验证目录、文档正文是否一致。

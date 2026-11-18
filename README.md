@@ -11,6 +11,7 @@
 - `scripts/tm_engine.py`：固定参数的 Tm 与退火温度引擎
 - `scripts/simulate_build.py`：按引物模拟每个 PCR、按同源臂模拟 Gibson，把片段（线性）与产物（环状）写成 `.dna` 并与目标比对
 - `scripts/snapgene_io.py`：`.dna` 读写，含拓扑 flags 与 feature 颜色
+- `scripts/reconcile.py`：对账，比对引物表、设计 JSON、验证目录、文档正文
 - `scripts/make_primer_sheet.py`：按实验室模板生成引物表 xlsx（逐对合并、`LEN`/`AVERAGE`/`IF` 公式）
 - `assets/primer_design_template.xlsx`：实验室引物表模板原件
 
@@ -21,7 +22,8 @@ python3 scripts/audit_assembly.py design.json
 python3 scripts/check_primers.py primers.json --csv primer_qc.csv
 python3 scripts/tm_engine.py primers.json --csv primers.csv --latex
 python3 scripts/make_primer_sheet.py sheet.json
-python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT
+python3 scripts/simulate_build.py design.json --outdir 验证/mPhyB-WT --sheet 引物表.xlsx
+python3 scripts/reconcile.py --sheet 引物表.xlsx --design design.json --verify 验证 --doc 方案.tex
 ```
 
 脚本的退出码非 0 表示有检查未通过，可以直接用来卡住后续步骤。
