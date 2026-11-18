@@ -118,13 +118,45 @@ def scan(seq, primer, idx, max_mismatch=2, circular=True):
     return hits
 
 
-def check(seq, primer, idx, max_mismatch=2, terminal=2, circular=True):
+def three_prime_sites(seq, primer, circular=True, min_run=6, tm_limit=42.0):
+    """Sites whose 3' end anneals perfectly for long enough to prime above tm_limit.
+
+    A site can carry many mismatches at its 5' end and still be extended: only the
+    3' terminal stretch has to anneal. Counting total mismatches misses those, so
+    measure the perfect 3' run itself and its Tm instead.
+    """
+    n = len(seq)
+    d = seq + seq if circular else seq
+    out = []
+    for strand, probe in (("+", primer), ("-", rc(primer))):
+        for pos in range(n):
+            if not circular and pos + len(probe) > n:
+                continue
+            window = d[pos:pos + len(probe)]
+            if len(window) < len(probe):
+                continue
+            run = 0
+            while run < len(probe) and window[run] == probe[run]:
+                run += 1
+            if run < min_run:
+                continue
+            t = tm(primer[-run:])
+            if t > tm_limit:
+                diffs = [k for k, (a, b) in enumerate(zip(window, probe)) if a != b]
+                out.append((strand, pos + 1, len(diffs), run, round(t, 1)))
+    out.sort(key=lambda h: -h[4])
+    return out
+
+
+def check(seq, primer, idx, max_mismatch=2, terminal=2, circular=True, tm_limit=42.0):
     hits = scan(seq, primer, idx, max_mismatch, circular)
     perfect = [h for h in hits if h[2] == 0]
     risky = [h for h in hits if h[2] > 0
              and not all(k >= len(primer) - terminal for k in h[3])]
-    ok = len(perfect) == 1 and not risky
-    return ok, perfect, risky, hits
+    hot = [h for h in three_prime_sites(seq, primer, circular, tm_limit=tm_limit)
+           if h[2] > 0]
+    ok = len(perfect) == 1 and not risky and not hot
+    return ok, perfect, risky, hits, hot
 
 
 def perfect_sites(seq, primer, idx, max_mismatch=2, strand=None, circular=True):
@@ -189,7 +221,7 @@ def main(argv=None):
             t = read_fasta(tmpl_paths[tname])
             cache[tname] = (t, build_index(t), tname not in linear)
         t, idx, circ = cache[tname]
-        ok, perfect, risky, hits = check(t, bind, idx, args.max_mismatch, args.terminal, circ)
+        ok, perfect, risky, hits, hot = check(t, bind, idx, args.max_mismatch, args.terminal, circ)
         absent = list(p.get("absent_on") or [])
         if p.get("control") and p.get("control_absent"):
             absent.append(p["control"])
@@ -205,8 +237,8 @@ def main(argv=None):
                 ct = read_fasta(tmpl_paths[cname])
                 cache[cname] = (ct, build_index(ct), cname not in linear)
             ct, cidx, ccirc = cache[cname]
-            c_ok, c_perfect, c_risky, _ = check(ct, bind, cidx, args.max_mismatch, args.terminal, ccirc)
-            if c_perfect or c_risky:
+            c_ok, c_perfect, c_risky, _, c_hot = check(ct, bind, cidx, args.max_mismatch, args.terminal, ccirc)
+            if c_perfect or c_risky or c_hot:
                 ok = False
                 control_fail = (f"对照 {cname} 有 {len(c_perfect)} 个完全匹配、"
                                 f"{len(c_risky)} 个可延伸近似位点（这条引物不是区分侧，去掉 absent_on）")
@@ -221,6 +253,7 @@ def main(argv=None):
         rows.append(dict(name=name, template=tname, length=len(seq),
                          tm=round(tm(bind), 1), gc=round(gc(bind)),
                          exact=len(perfect), risky=len(risky),
+                         hot="; ".join(f"{h[0]}{h[1]}({h[3]}nt@{h[4]})" for h in hot),
                          pos=perfect[0][1] if perfect else "",
                          other="; ".join(f"{h[0]}{h[1]}({h[2]}mm@{h[3]})" for h in risky) + control_note))
         if not ok:
@@ -230,12 +263,14 @@ def main(argv=None):
                 detail.append(f"完整匹配 {len(perfect)} 处")
             for h in risky:
                 detail.append(f"模板{h[0]}链 {h[1]:,} 位，{h[2]} 个错配（位置 {h[3]}）")
+            for h in hot:
+                detail.append(f"模板{h[0]}链 {h[1]:,} 位，3′ 端 {h[3]} nt 完美互补、Tm {h[4]} °C，会延伸")
             if control_fail:
                 detail.append(control_fail)
             print(f"[FAIL] {name} ({tname}): " + "；".join(detail))
         else:
             print(f"[ OK ] {name} ({tname}): 唯一位点 {perfect[0][1]:,}，"
-                  f"无 ≤{args.max_mismatch} 错配的可延伸位点{control_note} | Tm {tm(bind):.1f} °C")
+                  f"无 3′ 端可退火错配{control_note} | Tm {tm(bind):.1f} °C")
 
     pair_rows = []
     pair_failed = 0
